@@ -73,12 +73,13 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
   <section class="card">
     <div class="label">계산 방법</div>
     <div class="mode" role="group" aria-label="계산 방법">
-      <button class="chip" id="mSize" data-m="size" aria-pressed="true">치수(cm)로</button>
+      <button class="chip" id="mSize" data-m="size" aria-pressed="true">치수로</button>
       <button class="chip" id="mPy" data-m="py" aria-pressed="false">평수로</button>
     </div>
 
     <div id="sizeBox" style="display:grid;gap:10px">
-      <div class="label">방 치수 (가로 × 세로, cm)</div>
+      <div class="label">방 치수 (가로 × 세로)</div>
+      <div class="mode" role="group" aria-label="단위"><button class="chip" id="uM" data-u="m" aria-pressed="true">m(미터)</button><button class="chip" id="uCm" data-u="cm" aria-pressed="false">cm(센티)</button></div>
       <div id="rooms" style="display:grid;gap:8px"></div>
       <button class="add" id="addRoom">+ 방 추가</button>
     </div>
@@ -105,11 +106,12 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
       <div><span>계산 장수 (여유분 전)</span><b id="raw">-</b></div>
       <div><span>여유분 포함 장수</span><b id="withLoss">-</b></div>
       <div><span>박스로 사면 남는 장수</span><b id="spare">-</b></div>
+      <div><span>리무벌 스티커 (비접착 시공)</span><b id="rem">-</b></div>
       <div><span>접착 시공 시 본드</span><b id="bond">-</b></div>
     </div>
     <div class="draw" id="draw"></div>
     <div class="legend" id="legend"><span><i style="background:var(--tile-a)"></i>통장</span><span><i style="background:var(--cut)"></i>잘라서 쓰는 장</span></div>
-    <p class="note">계산 결과는 예상치이며 방 모양, 문턱, 기둥 등 실제 조건에 따라 달라질 수 있습니다. 데코본드 3L는 5~7박스, 8L는 10~13박스 기준입니다.</p>
+    <p class="note">계산 결과는 예상치이며 방 모양, 문턱, 기둥 등 실제 조건에 따라 달라질 수 있습니다. 데코본드 3L는 5~7박스, 8L는 10~13박스 기준입니다. 리무벌 스티커는 별도 구매 상품입니다.</p>
   </section>
 </div>
 
@@ -117,13 +119,13 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
 (function(){
   // 규격 정보: 크기는 cm, 박스당 장수
   var SPEC={
-    "450":{name:"450",w:45,h:45,box:16,square:true},
-    "600":{name:"600",w:60,h:60,box:9,square:true},
-    "wood":{name:"우드",w:95,h:18.4,box:19,square:false}
+    "450":{name:"450",w:45,h:45,box:16,rem:3,square:true},
+    "600":{name:"600",w:60,h:60,box:9,rem:2,square:true},
+    "wood":{name:"우드",w:95,h:18.4,box:19,rem:5,square:false}
   };
   var PYEONG=33057.85; // 1평 = 3.305785㎡ = 33,057.85cm²
-  var state={k:"600",mode:"size",loss:5,rooms:[[300,400]]};
-  try{var s=JSON.parse(localStorage.getItem("sg-calc")||"null");if(s&&SPEC[s.k]&&s.rooms){state=s;}}catch(e){}
+  var state={k:"600",mode:"size",unit:"m",loss:5,rooms:[[3,4]]};
+  try{var s=JSON.parse(localStorage.getItem("sg-calc2")||"null");if(s&&SPEC[s.k]&&s.rooms){state=s;}}catch(e){}
 
   var $=function(id){return document.getElementById(id)};
   var fmt=function(n){return n.toLocaleString("ko-KR")};
@@ -132,8 +134,8 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
     var box=$("rooms");box.innerHTML="";
     state.rooms.forEach(function(r,i){
       var row=document.createElement("div");row.className="room";
-      row.innerHTML='<input id="rw'+i+'" type="number" inputmode="decimal" min="0" placeholder="가로" aria-label="방 '+(i+1)+' 가로 cm" value="'+(r[0]||"")+'">'+
-        '<span class="x">×</span><input id="rh'+i+'" type="number" inputmode="decimal" min="0" placeholder="세로" aria-label="방 '+(i+1)+' 세로 cm" value="'+(r[1]||"")+'">'+
+      row.innerHTML='<input id="rw'+i+'" type="number" inputmode="decimal" min="0" step="any" placeholder="가로 '+state.unit+'" aria-label="방 '+(i+1)+' 가로" value="'+(r[0]||"")+'">'+
+        '<span class="x">×</span><input id="rh'+i+'" type="number" inputmode="decimal" min="0" step="any" placeholder="세로 '+state.unit+'" aria-label="방 '+(i+1)+' 세로" value="'+(r[1]||"")+'">'+
         '<button class="del" aria-label="방 '+(i+1)+' 지우기" title="이 방 지우기">×</button>';
       row.querySelector("#rw"+i).addEventListener("input",function(e){state.rooms[i][0]=parseFloat(e.target.value)||0;calc()});
       row.querySelector("#rh"+i).addEventListener("input",function(e){state.rooms[i][1]=parseFloat(e.target.value)||0;calc()});
@@ -162,11 +164,11 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
     var sp=SPEC[state.k],raw=0,area=0,first=null;
     if(state.mode==="size"){
       state.rooms.forEach(function(r){
-        var w=r[0]||0,h=r[1]||0;if(w<=0||h<=0)return;
+        var f=state.unit==="m"?100:1,w=(r[0]||0)*f,h=(r[1]||0)*f;if(w<=0||h<=0)return;
         area+=w*h;
         if(sp.square){raw+=Math.ceil(w/sp.w)*Math.ceil(h/sp.h)}
         else{raw+=Math.ceil(w*h/(sp.w*sp.h))}
-        if(!first)first=[w,h];
+        if(!first)first=[Math.round(w*10)/10,Math.round(h*10)/10];
       });
     }else{
       var py=parseFloat($("pyIn").value)||0;area=py*PYEONG;
@@ -180,9 +182,10 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
     $("raw").textContent=raw?fmt(raw)+"장":"-";
     $("withLoss").textContent=raw?fmt(withLoss)+"장 (+"+state.loss+"%)":"-";
     $("spare").textContent=raw?fmt(boxes*sp.box-withLoss)+"장":"-";
+    $("rem").textContent=boxes?fmt(boxes*sp.rem)+"장 (박스당 "+sp.rem+"장)":"-";
     $("bond").textContent=bondText(boxes);
     draw(first,sp);
-    try{localStorage.setItem("sg-calc",JSON.stringify(state))}catch(e){}
+    try{localStorage.setItem("sg-calc2",JSON.stringify(state))}catch(e){}
   }
 
   function draw(r,sp){
@@ -214,10 +217,14 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline
   document.querySelectorAll("[data-l]").forEach(function(b){b.addEventListener("click",function(){state.loss=+b.dataset.l;setPressed("[data-l]","l",state.loss);calc()})});
   $("addRoom").addEventListener("click",function(){state.rooms.push([0,0]);renderRooms();calc();var i=state.rooms.length-1;var f=$("rw"+i);if(f)f.focus()});
   $("pyIn").addEventListener("input",calc);
+  document.querySelectorAll("[data-u]").forEach(function(b){b.addEventListener("click",function(){
+    if(state.unit===b.dataset.u)return;var f=b.dataset.u==="m"?0.01:100;
+    state.rooms=state.rooms.map(function(r){return [Math.round(r[0]*f*1000)/1000,Math.round(r[1]*f*1000)/1000]});
+    state.unit=b.dataset.u;setPressed("[data-u]","u",state.unit);renderRooms();calc()})});
 
   // 주소 끝에 #450, #600, #wood 를 붙이면 그 규격으로 열림 (상품마다 다른 링크용)
   var h=(location.hash||"").replace("#","");if(SPEC[h])state.k=h;
-  setPressed(".tab","k",state.k);setPressed("[data-m]","m",state.mode);setPressed("[data-l]","l",state.loss);
+  setPressed(".tab","k",state.k);setPressed("[data-m]","m",state.mode);setPressed("[data-l]","l",state.loss);setPressed("[data-u]","u",state.unit);
   $("sizeBox").style.display=state.mode==="size"?"grid":"none";$("pyBox").hidden=state.mode!=="py";
   renderRooms();calc();
 })();
