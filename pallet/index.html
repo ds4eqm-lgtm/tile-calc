@@ -81,7 +81,7 @@ label{display:block;font-size:14px;color:var(--sub);margin:10px 0 4px}
 <div id="toast"></div>
 <script>
 'use strict';
-const VER='0.3';
+const VER='0.4';
 const REPO_DEF='ds4eqm-lgtm/pallet-box',FILE='yard.json',SECTORS=['B','A'];
 const LS='pl1_',$=s=>document.querySelector(s);
 const GH=()=>window.PL_GH||'https://api.github.com';
@@ -174,7 +174,7 @@ function render(){const m=$('#main');if(!cfg.tok){setup();return}
         return `<div class="half ${lv.toLowerCase()}${hit?' hit':''}${old&&old.k===k?' old':''}${pk.has(k)?' pend':''}" data-k="${k}"><span class="lv">${lv==='U'?'위':'아래'}</span>`+
           (v?`<div class="no">${esc(v.no)}</div><div class="dt">${esc(fmtD(v.d))}</div>`:'<div class="em">비어 있음</div>')+'</div>'}).join('')+'</div>'})}
   h+='</div><div class="foot"><button class="btn gray" id="bHist">전체 이력 보기</button><button class="btn gray" id="bShare">주소 나눠 주기</button><button class="btn gray" id="bSet">설정</button></div>'+
-   `<div class="note">칸을 누르면 번호와 생산일자를 넣거나 고치거나 뺄 수 있습니다. 위 칸이 2단(위에 올린 팔레트), 아래 칸이 1단(바닥 팔레트)입니다.<br>말로 기록: [🎤 말로 기록]을 누르고 "A 1번 위 1699 2026 10 11"처럼 말하면 해당 칸이 채워진 채로 열립니다. 빼낼 때는 "A 1번 위 삭제".<br>기록한 사람: ${esc(cfg.name||'아직 이름 없음')} · 판 ${VER}</div>`;
+   `<div class="note">칸을 누르면 번호와 생산일자를 넣거나 고치거나 뺄 수 있습니다. 위 칸이 2단(위에 올린 팔레트), 아래 칸이 1단(바닥 팔레트)입니다.<br>말로 기록: [🎤 말로 기록]을 누르고 "A 1번 위 1699 2026 10 11"처럼 말하면 해당 칸이 채워진 채로 열립니다. 빼낼 때는 "A 1번 위 삭제".<br>기록한 사람: ${esc(cfg.name||'아직 이름 없음')} · ver ${VER}</div>`;
   m.innerHTML=h;
   m.querySelectorAll('.half').forEach(e=>e.onclick=()=>openCell(e.dataset.k));
   $('#bHist').onclick=()=>openHist();$('#bShare').onclick=openShare;$('#bSet').onclick=openSet;
@@ -314,7 +314,7 @@ $('#q').oninput=()=>{render.scroll=true;render()};
 window.addEventListener('hashchange',()=>{readHash();render();sync(true)});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
 window.addEventListener('online',()=>sync(true));
-$('#ver').textContent='판 '+VER;
+$('#ver').textContent='ver '+VER;
 render();if(cfg.tok)sync(true);
 (function loop(){setTimeout(()=>{if(cfg.tok&&!$('#sheet').classList.contains('on')||pend.length)sync();loop()},POLL())})();
 window.PL={parseVoice,normVoice,view,get pend(){return pend},sync};
