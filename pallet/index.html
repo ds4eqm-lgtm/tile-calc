@@ -81,7 +81,7 @@ label{display:block;font-size:14px;color:var(--sub);margin:10px 0 4px}
 <div id="toast"></div>
 <script>
 'use strict';
-const VER='0.8';
+const VER='0.9';
 const REPO_DEF='ds4eqm-lgtm/pallet-box',FILE='yard.json',SECTORS=['B','A'];
 const LS='pl1_',$=s=>document.querySelector(s);
 const GH=()=>window.PL_GH||'https://api.github.com';
@@ -104,7 +104,8 @@ function readHash(){const h=new URLSearchParams(location.hash.slice(1));const t=
   if(t){cfg.tok=t.trim();if(r)cfg.repo=r.trim();sv('cfg',cfg)}}
 cfg=ld('cfg',{});readHash();if(!cfg.repo)cfg.repo=REPO_DEF;
 pend=ld('pend',[]);data=ld('cache',null);
-function shareUrl(){return location.origin+location.pathname+'#t='+encodeURIComponent(cfg.tok)+(cfg.repo!==REPO_DEF?'&r='+encodeURIComponent(cfg.repo):'')}
+const OFFICIAL='https://ds4eqm-lgtm.github.io/tile-calc/pallet/',LIVE=location.protocol==='https:'&&location.hostname==='ds4eqm-lgtm.github.io';
+function shareUrl(){return (LIVE?location.origin+location.pathname:OFFICIAL)+'#t='+encodeURIComponent(cfg.tok)+(cfg.repo!==REPO_DEF?'&r='+encodeURIComponent(cfg.repo):'')}
 
 /* ---------- 깃허브 읽기·쓰기 ---------- */
 function b64e(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s)}
@@ -233,12 +234,18 @@ function openHist(){const D=view();let f='';
     $('#hC').onclick=closeS;$('#hf').oninput=e=>{f=e.target.value.trim();draw()};draw()})}
 function qrInto(el,txt){el.innerHTML='';if(window.QRCode){new QRCode(el,{text:txt,width:440,height:440,correctLevel:QRCode.CorrectLevel.L});return}
   const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=()=>qrInto(el,txt);s.onerror=()=>el.textContent='(QR 그림을 불러오지 못했습니다. 아래 주소를 복사해 보내 주세요)';document.head.appendChild(s)}
-function copy(t){if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(t).then(()=>toast('주소를 복사했습니다. 카톡에 붙여넣어 보내 주세요'),()=>prompt('이 주소를 복사해 주세요',t));prompt('이 주소를 복사해 주세요',t)}
-function openShare(){const u=shareUrl();openS(`<h3>주소 나눠 주기</h3><div class="note" style="margin-top:0">이 주소를 받은 사람은 누구나 기록을 넣고 고치고 지울 수 있습니다 (모든 변경은 이력에 남습니다). 지게차 기사님 휴대폰으로 아래 QR을 찍거나, 주소를 카톡으로 보내 주세요.</div>
-  <div id="qr"></div><div class="mono">${esc(u)}</div>
-  <div class="acts"><button class="btn wide" id="sCopy">주소 복사</button>${navigator.share?'<button class="btn green wide" id="sShare">카톡 등으로 보내기</button>':''}<button class="btn gray wide" id="sC">닫기</button></div>
-  <div class="note">카톡 안에서 열면 마이크가 안 될 수 있습니다. 그럴 땐 오른쪽 위 점 세 개 → [다른 브라우저로 열기](크롬·사파리)를 눌러 주세요. 열린 화면에서 [홈 화면에 추가]를 해 두면 앱처럼 바로 열립니다.</div>`,()=>{
-  qrInto($('#qr'),u);$('#sCopy').onclick=()=>copy(u);$('#sC').onclick=closeS;if($('#sShare'))$('#sShare').onclick=()=>navigator.share({title:'야적장 팔레트 배치도',url:u}).catch(()=>{})})}
+function copyOld(t){try{const a=document.createElement('textarea');a.value=t;a.setAttribute('readonly','');a.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.appendChild(a);a.select();a.setSelectionRange(0,t.length);const ok=document.execCommand('copy');a.remove();return ok}catch(e){return false}}
+function copyFail(){const m=$('#sbox .mono');if(m){try{const r=document.createRange();r.selectNodeContents(m);const g=getSelection();g.removeAllRanges();g.addRange(r)}catch(e){}}toast('이 화면에서는 저절로 복사가 막혀 있습니다. 회색 칸의 주소를 길게 눌러 복사해 주세요',5000)}
+function copy(t){const done=()=>toast('주소를 복사했습니다. 카톡에 붙여넣어 보내 주세요');
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(done,()=>copyOld(t)?done():copyFail());return}
+  copyOld(t)?done():copyFail()}
+function shareTo(u){if(!navigator.share){copy(u);return}
+  try{navigator.share({title:'야적장 팔레트 배치도',text:'야적장 팔레트 배치도 (지게차용)',url:u}).catch(e=>{if(!e||e.name!=='AbortError'){copy(u)}})}catch(e){copy(u)}}
+function openShare(){const u=shareUrl();openS(`<h3>주소 나눠 주기</h3>${LIVE?'':'<div style="background:#fff3cd;border-radius:8px;padding:8px;font-size:14px;line-height:1.6;margin-bottom:8px">지금 이 화면은 미리보기라서 복사·보내기가 막힐 수 있습니다. 아래 주소는 실제 주소('+esc(OFFICIAL)+')로 만들어 두었습니다. 깃허브에 합친 뒤 실제 주소에서 열면 바로 됩니다.</div>'}<div class="note" style="margin-top:0">이 주소를 받은 사람은 누구나 기록을 넣고 고치고 지울 수 있습니다 (모든 변경은 이력에 남습니다). 지게차 기사님 휴대폰으로 아래 QR을 찍거나, 주소를 카톡으로 보내 주세요.</div>
+  <div id="qr"></div><div class="mono" style="user-select:all;-webkit-user-select:all">${esc(u)}</div>
+  <div class="acts"><button class="btn wide" id="sCopy">주소 복사</button><button class="btn green wide" id="sShare">카톡 등으로 보내기</button><button class="btn gray wide" id="sC">닫기</button></div>
+  <div class="note">[카톡 등으로 보내기]를 누르면 휴대폰의 보내기 화면이 열리고 거기서 카카오톡을 고르면 됩니다. PC에서는 [주소 복사] 뒤 카톡 대화창에 붙여넣어 주세요.<br>카톡 안에서 열면 마이크가 안 될 수 있습니다. 그럴 땐 오른쪽 위 점 세 개 → [다른 브라우저로 열기](크롬·사파리)를 눌러 주세요. 열린 화면에서 [홈 화면에 추가]를 해 두면 앱처럼 바로 열립니다.</div>`,()=>{
+  qrInto($('#qr'),u);$('#sCopy').onclick=()=>copy(u);$('#sC').onclick=closeS;$('#sShare').onclick=()=>shareTo(u)})}
 function openSet(){const D=view();openS(`<h3>설정</h3>
   <label>기록할 이름 (이 휴대폰)</label><input id="tN" value="${esc(cfg.name||'')}" autocomplete="off">
   <div class="row2"><div><label>A 구역 칸 수</label><input id="tA" inputmode="numeric" value="${D.size.A||8}"></div><div><label>B 구역 칸 수</label><input id="tB" inputmode="numeric" value="${D.size.B||8}"></div></div>
@@ -270,7 +277,7 @@ function setup(){$('#main').innerHTML=`<div class="setup"><h3 style="margin-top:
   $('#sGo').onclick=async()=>{const t=$('#sT').value.trim();if(!/^(github_pat_|ghp_)/.test(t)){$('#sM').textContent='github_pat_로 시작하는 출입증을 붙여넣어 주세요';return}
     cfg.tok=t;$('#sM').textContent='확인하는 중...';$('#sGo').disabled=true;
     try{const r=await gh('');if(!r.ok)throw new Error(ghErr(r));const j=await r.json();if(j.permissions&&j.permissions.push===false)throw new Error('perm');
-      sv('cfg',cfg);history.replaceState(null,'',shareUrl());render();sync(true);openShare()}
+      sv('cfg',cfg);try{history.replaceState(null,'',location.pathname+location.search+'#t='+encodeURIComponent(cfg.tok))}catch(e){}render();sync(true);openShare()}
     catch(e){cfg.tok='';$('#sM').textContent=MSG[e.message]||MSG.net;$('#sGo').disabled=false}};bar()}
 
 /* ---------- 음성 ---------- */
